@@ -1,4 +1,4 @@
-# chat-socket
+# socket-chat
 
 >  一个基于 **Java**、**HTML**、**CSS** 和 **JavaScript** 开发的实时聊天室应用，使用 **STOMP** 协议结合 **SockJS** 实现 WebSocket 通信。
 
