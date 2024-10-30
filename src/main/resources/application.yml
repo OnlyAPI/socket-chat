@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: chat-socket
+server:
+  port: 8080
+
+
+logging:
+  config: classpath:logback.xml
+  level:
+    root: INFO

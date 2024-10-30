@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat App with STOMP and SockJS</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --bg-color-day: #f4f4f4;
+            --bg-color-night: #1c1c1c;
+            --text-color-day: #333;
+            --text-color-night: #e0e0e0;
+            --input-bg-color-night: #333;
+            --message-bg-night: #2e2e2e;
+            --scrollbar-thumb-night: #555;
+        }
+        body {
+            font-family: 'Arial', sans-serif; /* 可以替换成其他字体，比如 'Verdana', 'Tahoma' 等 */
+            background-color: var(--bg-color-day);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .night-mode body {
+            background-color: var(--bg-color-night);
+            color: var(--text-color-night);
+        }
+
+
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+        #online-users {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 10px;
+            color: var(--text-color-day);
+        }
+        .night-mode #online-users {
+            color: var(--text-color-night);
+        }
+
+        #chat-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-width: 650px;
+            width: 100%;
+            height: 450px;
+            display: none; /* 默认不显示聊天框 */
+            flex-direction: column;
+            padding: 15px;
+            overflow: hidden;
+        }
+
+        .night-mode #chat-container {
+            background: var(--message-bg-night);
+        }
+
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            position: relative;
+            background: white;
+        }
+        .night-mode #messages {
+            background: var(--bg-color-night);
+            border-color: #444;
+        }
+
+
+        #messages::-webkit-scrollbar {
+            width: 8px;
+        }
+        #messages::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+        #messages::-webkit-scrollbar-thumb:hover {
+            background: #bbb;
+        }
+        .message {
+            display: flex;
+            align-items: flex-start;
+            margin: 15px 0; /* 上下间距调整 */
+            position: relative;
+            overflow: hidden;
+        }
+        .username {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background-color: #007bff;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            margin-right: 10px; /* 用户名与内容之间的间距 */
+            flex-shrink: 0;
+            position: absolute; /* 使用绝对定位 */
+            top: 0; /* 使其保持在顶部 */
+            left: 0; /* 保持在左侧 */
+        }
+
+        .username:hover {
+            cursor: pointer;
+        }
+
+        .message-content {
+            padding: 8px 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            line-height: 1.4;
+            max-width: calc(100% - 50px);
+            overflow: hidden;
+            white-space: normal;
+            margin-left: 40px; /* 为消息内容留出空间 */
+            font-size: 15px; /* 调整字体大小 */
+        }
+
+        #username-form, #chat-form {
+            margin-top: 10px;
+            text-align: center;
+        }
+        input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: calc(100% - 80px);
+            max-width: 300px;
+            margin-right: 5px;
+            transition: border 0.3s;
+        }
+
+        .night-mode input[type="text"] {
+            background-color: var(--input-bg-color-night);
+            color: var(--text-color-night);
+        }
+
+        input[type="text"]:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        button {
+            margin-top: 5px;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .night-mode button {
+            background-color: #0056b3;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .night-mode button:hover {
+            background-color: #007bff;
+        }
+
+
+        hr {
+            border: none;
+            border-top: 1px solid #ddd;
+            margin: 20px 0;
+            width: 100%;
+        }
+        .myMessage{
+            background-color: #95ec69;
+        }
+
+        .night-mode {
+            background-color: var(--bg-color-night);
+        }
+
+        #mode-toggle {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+        }
+    </style>
+</head>
+<body>
+<h1>Chat App (STOMP and SockJS)</h1>
+
+<button id="mode-toggle" onclick="toggleNightMode()">夜间</button>
+
+
+<!-- 在线人数显示 -->
+<div id="online-users"></div>
+
+<!-- 聊天容器 -->
+<div id="chat-container">
+    <!-- 消息显示区域 -->
+    <div id="messages"></div>
+
+    <!-- 聊天表单 -->
+    <form id="chat-form" style="display: block;">
+        <input type="text" id="message-input" placeholder="发一条消息" required />
+        <button type="submit">发送</button>
+    </form>
+</div>
+
+<!-- 用户名输入表单 -->
+<div id="username-form" style="display: block; margin-top: 10px;">
+    <input type="text" id="username-input" placeholder="起个昵称吧" required />
+    <br/>
+    <button type="button" onclick="setUsername()">加入聊天</button>
+</div>
+
+<script>
+    var socket;
+    var stompClient;
+    var username;
+
+    // 设置用户名并连接WebSocket
+    function setUsername() {
+        const input = document.getElementById('username-input');
+        username = input.value.trim();
+        if (username) {
+            document.getElementById('username-form').style.display = 'none';
+            document.getElementById('chat-container').style.display = 'flex'; // 显示聊天框
+
+            socket = new SockJS('/chat');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function(frame) {
+                console.log('Connected: ' + frame);
+                stompClient.subscribe('/topic/messages', function(messageOutput) {
+                    var messagesDiv = document.getElementById('messages');
+                    var messageData = JSON.parse(messageOutput.body); // 假设消息是JSON格式
+                    var user = messageData.username;
+                    var content = messageData.content;
+
+                    var newMessage = document.createElement('div');
+                    newMessage.className = 'message';
+                    // 判断是否是当前用户
+                    var messageClass = (user === username) ? 'message-content myMessage' : 'message-content';
+                    newMessage.innerHTML = `
+                        <div class="username" title="${user}">${user.slice(-2).toUpperCase()}</div>
+                        <div class="${messageClass}">${content.trim()}</div>
+                    `;
+                    messagesDiv.appendChild(newMessage);
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight; // 自动滚动到底部
+                });
+
+                getOnlineUsers();
+                setInterval(getOnlineUsers, 5000); // 每5秒获取一次
+            });
+        } else {
+            alert('请输入有效的昵称。');
+        }
+    }
+
+    // 发送消息
+    document.getElementById('chat-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        if (!username) {
+            alert('请先设置昵称。');
+            return;
+        }
+
+        const input = document.getElementById('message-input');
+        const message = input.value.trim();
+
+        if (message) {
+            stompClient.send("/app/send", {}, JSON.stringify({ content: message, username: username }));
+            input.value = ''; // 清空输入框
+        }
+    });
+
+    // 获取在线人数
+    function getOnlineUsers() {
+        fetch('/online')
+            .then(response => response.json())
+            .then(data => {
+                if (data.code === 0) {
+                    document.getElementById('online-users').textContent = `在线人数: ${data.data}`;
+                } else {
+                    console.error('获取在线人数失败:', data.msg);
+                }
+            })
+            .catch(error => {
+                console.error('获取在线人数时出错:', error);
+            });
+    }
+
+    function toggleNightMode() {
+        document.body.classList.toggle('night-mode');
+        document.getElementById('mode-toggle').textContent = document.body.classList.contains('night-mode') ? '日间' : '夜间';
+    }
+
+    // 页面加载时尝试获取在线人数
+    window.onload = function() {
+        getOnlineUsers();
+    };
+</script>
+</body>
+</html>
