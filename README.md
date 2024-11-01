@@ -75,3 +75,6 @@
 3. 此项目为闲暇之余兴趣开发，这是个demo，没考虑消息安全等方面。请注意！
 4. 如果觉得项目做的有点意思，还请大家多多star~~
 
+
+## 鸣谢
+- 感谢 [Xiumuzaidiao](https://github.com/Xiumuzaidiao/Day-night-toggle-button.git) 开源的项目。
