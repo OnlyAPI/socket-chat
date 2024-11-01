@@ -77,4 +77,4 @@
 
 
 ## 鸣谢
-- 感谢 [Xiumuzaidiao](https://github.com/Xiumuzaidiao/Day-night-toggle-button.git) 开源的项目。
+- 感谢 [Xiumuzaidiao](https://github.com/Xiumuzaidiao/Day-night-toggle-button.git) 开源的日夜切换功能的项目。
